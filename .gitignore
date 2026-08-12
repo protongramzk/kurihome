@@ -1,0 +1,26 @@
+# Android build files
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+
+# Gradle files and directories
+.gradle/
+build/
+app/build/
+
+# IDE specific files
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+local.properties
+captures/
+.externalNativeBuild
+.cxx
