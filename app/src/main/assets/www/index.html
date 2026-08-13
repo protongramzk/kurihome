@@ -3,49 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>KuriHome Launcher</title>
+    <title>KuriHome Canvas</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Background / Wallpaper Layer -->
     <div id="wallpaper-layer" class="wallpaper-container"></div>
 
-    <!-- Desktop Workspace Grid (Optional icons could go here) -->
-    <div id="desktop-workspace" class="desktop-workspace">
-        <div class="welcome-text">
-            <h2>KuriHome</h2>
-            <p>Tahan lama (Long Press) di sini untuk membuka Pengaturan</p>
-        </div>
+    <!-- Page Viewport: holds all pages, translated on swipe -->
+    <div id="page-viewport" class="page-viewport">
+        <!-- Pages injected dynamically by app.js -->
     </div>
 
-    <!-- Taskbar / Dock at bottom -->
-    <div class="taskbar">
-        <button id="start-btn" class="start-btn">
-            <svg class="start-icon" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
-            </svg>
-            <span>Mulai</span>
-        </button>
-        <div id="active-indicator" class="active-indicator"></div>
-    </div>
+    <!-- 2D page indicator -->
+    <div id="page-indicator" class="page-indicator"></div>
 
-    <!-- Start Menu / App Drawer Modal -->
-    <div id="app-drawer-modal" class="modal">
-        <div class="modal-content drawer-content">
+    <!-- Optional Dock (hidden unless enabled in settings) -->
+    <div id="dock" class="dock hidden"></div>
+
+    <!-- App Picker Modal (opened on double tap) -->
+    <div id="app-picker-modal" class="modal">
+        <div class="modal-content picker-content">
             <div class="modal-header">
-                <h3>Semua Aplikasi</h3>
-                <span class="close-btn" id="close-drawer">&times;</span>
+                <h3>Tambah Aplikasi</h3>
+                <span class="close-btn" id="close-picker">&times;</span>
             </div>
             <div class="search-box-container">
                 <input type="text" id="app-search" placeholder="Cari aplikasi..." autocomplete="off">
             </div>
             <div id="apps-grid" class="apps-grid">
-                <!-- Apps will be loaded dynamically -->
+                <!-- Apps injected dynamically -->
             </div>
         </div>
     </div>
 
-    <!-- Settings & Customization Modal -->
+    <!-- Icon Context Menu (long press on an icon) -->
+    <div id="icon-context-menu" class="context-menu hidden">
+        <button id="ctx-delete" class="context-item danger">Hapus dari Page</button>
+        <button id="ctx-cancel" class="context-item">Batal</button>
+    </div>
+
+    <!-- Settings & Customization Modal (long press on empty area) -->
     <div id="settings-modal" class="modal">
         <div class="modal-content settings-content">
             <div class="modal-header">
@@ -53,6 +51,36 @@
                 <span class="close-btn" id="close-settings">&times;</span>
             </div>
             <div class="settings-body">
+
+                <div class="settings-section">
+                    <h4>Tata Letak Page</h4>
+                    <p class="section-desc">Jumlah page (baris × kolom) dan grid icon per page.</p>
+                    <div class="field-row">
+                        <label>Baris Page <input type="number" id="cfg-page-rows" min="1" max="6"></label>
+                        <label>Kolom Page <input type="number" id="cfg-page-cols" min="1" max="6"></label>
+                    </div>
+                    <div class="field-row">
+                        <label>Baris Grid Icon <input type="number" id="cfg-grid-rows" min="2" max="8"></label>
+                        <label>Kolom Grid Icon <input type="number" id="cfg-grid-cols" min="2" max="8"></label>
+                    </div>
+                    <div class="btn-group">
+                        <button id="btn-apply-layout" class="action-btn primary">Terapkan</button>
+                        <button id="btn-reset-layout" class="action-btn danger">Reset Layout</button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4>Tampilan</h4>
+                    <label class="toggle-row">
+                        <span>Tampilkan Dock</span>
+                        <input type="checkbox" id="cfg-dock-enabled">
+                    </label>
+                    <label class="toggle-row">
+                        <span>Tampilkan Indikator Page</span>
+                        <input type="checkbox" id="cfg-indicator-enabled">
+                    </label>
+                </div>
+
                 <div class="settings-section">
                     <h4>Kustomisasi HTML Utama</h4>
                     <p class="section-desc">Gunakan file index.html Anda sendiri untuk memodifikasi Launcher sepenuhnya.</p>
@@ -75,4 +103,5 @@
 
     <script src="app.js"></script>
 </body>
-</html>
+                </html>
+                            
