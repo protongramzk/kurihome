@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KuriHome Fast Launcher</title>
+    <title>KuriHome Launcher</title>
     <style>
         * {
             margin: 0;
@@ -11,148 +11,360 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
+            -webkit-user-select: none;
         }
 
-        body {
+        html, body {
             width: 100vw;
             height: 100vh;
             overflow: hidden;
             background: #0d0e12;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: #ffffff;
-            display: flex;
-            flex-direction: column;
         }
 
-        /* Wallpaper Background */
+        /* ============ WALLPAPER ============ */
         #wallpaper-layer {
             position: fixed;
             inset: 0;
             background-size: cover;
             background-position: center;
             z-index: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: transform, opacity;
         }
 
         .wallpaper-fallback {
-            background: radial-gradient(circle at 50% 30%, #1e202e 0%, #090a0f 100%);
+            background: radial-gradient(circle at 50% 30%, #232538 0%, #090a0f 100%);
         }
 
         #wallpaper-layer::after {
             content: "";
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(0px);
+            transition: backdrop-filter 0.35s ease;
         }
 
-        /* Main Container */
-        .launcher-container {
+        body.drawer-active #wallpaper-layer {
+            transform: scale(1.03);
+        }
+
+        /* ============ HOME SCREEN ============ */
+        #home-screen {
             position: relative;
             z-index: 1;
-            display: flex;
-            flex-direction: column;
+            width: 100%;
             height: 100%;
-            width: 100%;
-            padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+            padding-top: calc(env(safe-area-inset-top) + 20px);
+            padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+            overflow: hidden;
         }
 
-        /* Search Header */
-        .search-container {
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto 16px auto;
+        #home-apps-container {
+            position: absolute;
+            inset: 0;
         }
 
-        .search-box {
-            width: 100%;
-            padding: 12px 18px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: rgba(20, 20, 28, 0.6);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            color: #fff;
-            font-size: 15px;
-            outline: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .search-box::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        /* Responsive Grid App List */
-        .apps-container {
-            flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 20px;
-        }
-
-        .apps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-            gap: 16px 12px;
-            align-content: start;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        /* App Item Optimizations */
-        .app-item {
+        .home-app-item {
+            position: absolute;
+            width: 78px;
+            height: 96px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
+            touch-action: none;
+            transition: left 0.25s cubic-bezier(0.16, 1, 0.3, 1), top 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s ease, opacity 0.2s ease;
+            z-index: 2;
             cursor: pointer;
-            will-change: transform;
+            will-change: left, top, transform;
         }
 
-        .app-item:active {
-            transform: scale(0.92);
+        .home-app-item:active {
+            transform: scale(0.90);
         }
 
-        .icon-wrapper {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.08);
+        .home-app-item.dragging {
+            transition: none !important;
+            z-index: 50;
+            transform: scale(1.12);
+            filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.5));
+        }
+
+        .home-app-item .icon-wrapper {
+            width: 58px;
+            height: 58px;
+            border-radius: 17px;
+            background: rgba(255, 255, 255, 0.10);
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 6px;
             overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+            transition: transform 0.2s ease;
         }
 
-        .app-icon {
+        .home-app-item .app-icon {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            /* Decoded asynchronously to prevent thread locking */
             decoding: async;
         }
 
-        .app-name {
+        .home-app-item .app-name {
             font-size: 11.5px;
-            font-weight: 400;
             text-align: center;
-            color: rgba(255, 255, 255, 0.9);
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            color: rgba(255, 255, 255, 0.92);
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
             width: 100%;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            padding: 0 2px;
+            pointer-events: none;
         }
 
-        /* Empty / Loading State */
+        #home-empty-hint {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 13.5px;
+            line-height: 1.7;
+            width: 80%;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        /* ============ FAB DRAWER BUTTON ============ */
+        #fab-drawer-btn {
+            position: fixed;
+            bottom: calc(env(safe-area-inset-bottom) + 22px);
+            left: 50%;
+            transform: translateX(-50%) scale(1);
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.14);
+            backdrop-filter: blur(16px) saturate(160%);
+            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, opacity 0.2s ease;
+            cursor: pointer;
+        }
+
+        #fab-drawer-btn:active {
+            transform: translateX(-50%) scale(0.88);
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        #fab-drawer-btn::before {
+            content: "";
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            background:
+                radial-gradient(circle, rgba(255,255,255,0.95) 2.4px, transparent 2.5px) 0 0/9px 9px,
+                radial-gradient(circle, rgba(255,255,255,0.95) 2.4px, transparent 2.5px) 9px 0/9px 9px,
+                radial-gradient(circle, rgba(255,255,255,0.95) 2.4px, transparent 2.5px) 0 9px/9px 9px,
+                radial-gradient(circle, rgba(255,255,255,0.95) 2.4px, transparent 2.5px) 9px 9px/9px 9px;
+        }
+
+        /* ============ APP DRAWER MODAL ============ */
+        #drawer-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease, background 0.3s ease;
+        }
+
+        #drawer-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.42);
+        }
+
+        #drawer-modal {
+            position: relative;
+            width: 100%;
+            max-width: 720px;
+            height: 80vh;
+            max-height: 800px;
+            border-radius: 32px 32px 0 0;
+            overflow: hidden;
+            transform: translateY(105%);
+            transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            will-change: transform;
+
+            background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(20,20,28,0.75) 100%);
+            backdrop-filter: blur(32px) saturate(180%);
+            -webkit-backdrop-filter: blur(32px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-bottom: none;
+            box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+        }
+
+        #drawer-overlay.open #drawer-modal {
+            transform: translateY(0);
+        }
+
+        #drawer-handle {
+            width: 42px;
+            height: 4.5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.45);
+            margin: 12px auto 8px auto;
+            flex-shrink: 0;
+        }
+
+        #drawer-header-info {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.75);
+            padding: 0 16px 4px 16px;
+            min-height: 16px;
+            font-weight: 500;
+        }
+
+        #drawer-search-container {
+            padding: 6px 18px 14px 18px;
+            flex-shrink: 0;
+        }
+
+        #drawer-search {
+            width: 100%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        #drawer-search:focus {
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        #drawer-search::placeholder {
+            color: rgba(255, 255, 255, 0.55);
+        }
+
+        #drawer-apps-container {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 4px 16px calc(env(safe-area-inset-bottom) + 24px) 16px;
+        }
+
+        #drawer-apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+            gap: 18px 10px;
+            align-content: start;
+        }
+
+        .drawer-app-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        .drawer-app-item:active {
+            transform: scale(0.88);
+        }
+
+        .drawer-app-item .icon-wrapper {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 6px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .drawer-app-item .app-icon {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            decoding: async;
+        }
+
+        .drawer-app-item .app-name {
+            font-size: 11px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.92);
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .status-msg {
             text-align: center;
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.65);
             margin-top: 40px;
             font-size: 14px;
             grid-column: 1 / -1;
+            line-height: 1.5;
+        }
+
+        #wallpaper-input {
+            display: none;
+        }
+
+        /* Toast Popup */
+        #toast {
+            position: fixed;
+            top: calc(env(safe-area-inset-top) + 20px);
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px) scale(0.9);
+            background: rgba(25, 25, 32, 0.88);
+            backdrop-filter: blur(14px) saturate(150%);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
         }
     </style>
 </head>
@@ -160,94 +372,391 @@
 
     <div id="wallpaper-layer" class="wallpaper-fallback"></div>
 
-    <div class="launcher-container">
-        <!-- Search Field -->
-        <div class="search-container">
-            <input type="text" id="search-input" class="search-box" placeholder="Cari aplikasi..." autocomplete="off">
+    <!-- ============ HOME SCREEN ============ -->
+    <div id="home-screen">
+        <div id="home-empty-hint">
+            Ketuk 2x untuk ganti wallpaper<br>
+            Tahan layar untuk tambah aplikasi
         </div>
+        <div id="home-apps-container"></div>
+    </div>
 
-        <!-- Apps Grid -->
-        <div class="apps-container">
-            <div id="apps-grid" class="apps-grid">
-                <div class="status-msg">Memuat aplikasi...</div>
+    <button id="fab-drawer-btn" aria-label="Buka semua aplikasi"></button>
+
+    <input type="file" id="wallpaper-input" accept="image/*">
+
+    <!-- ============ APP DRAWER MODAL ============ -->
+    <div id="drawer-overlay">
+        <div id="drawer-modal">
+            <div id="drawer-handle"></div>
+            <div id="drawer-header-info"></div>
+            <div id="drawer-search-container">
+                <input type="text" id="drawer-search" placeholder="Cari aplikasi..." autocomplete="off">
+            </div>
+            <div id="drawer-apps-container">
+                <div id="drawer-apps-grid">
+                    <div class="status-msg">Memuat aplikasi dari Android...</div>
+                </div>
             </div>
         </div>
     </div>
+
+    <div id="toast"></div>
 
     <script>
         (function () {
             'use strict';
 
-            let cachedApps = [];
-            const appsGrid = document.getElementById('apps-grid');
-            const searchInput = document.getElementById('search-input');
+            /* ============================================================
+               STATE
+            ============================================================ */
+            const LS_WALLPAPER = 'kh_wallpaper';
+            const LS_HOME_APPS = 'kh_home_apps';
+
+            let allApps = [];              // Full app list from window.kh bridge
+            let homeApps = [];             // Apps pinned to home screen
+            let pickerMode = false;        // true = tap in drawer adds app to home screen
+
             const wallpaperLayer = document.getElementById('wallpaper-layer');
+            const homeScreen = document.getElementById('home-screen');
+            const homeAppsContainer = document.getElementById('home-apps-container');
+            const homeEmptyHint = document.getElementById('home-empty-hint');
+            const fabDrawerBtn = document.getElementById('fab-drawer-btn');
+            const wallpaperInput = document.getElementById('wallpaper-input');
+            const drawerOverlay = document.getElementById('drawer-overlay');
+            const drawerHeaderInfo = document.getElementById('drawer-header-info');
+            const drawerSearch = document.getElementById('drawer-search');
+            const drawerAppsGrid = document.getElementById('drawer-apps-grid');
+            const toastEl = document.getElementById('toast');
 
-            // Default Fallback Mock Data
-            const MOCK_APPS = [
-                { name: 'Browser', packageName: 'com.android.chrome', icon: createSvgIcon('#4285F4') },
-                { name: 'Settings', packageName: 'com.android.settings', icon: createSvgIcon('#9E9E9E') },
-                { name: 'Camera', packageName: 'com.android.camera', icon: createSvgIcon('#E91E63') },
-                { name: 'Musik', packageName: 'com.android.music', icon: createSvgIcon('#4CAF50') },
-                { name: 'Galeri', packageName: 'com.android.gallery', icon: createSvgIcon('#FF9800') }
-            ];
+            const CELL_W = 82;
+            const CELL_H = 100;
+            const GRID_TOP_OFFSET = 60;
 
-            function createSvgIcon(color) {
-                return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="' + encodeURIComponent(color) + '"/></svg>';
+            function showToast(msg) {
+                toastEl.textContent = msg;
+                toastEl.classList.add('show');
+                clearTimeout(showToast._t);
+                showToast._t = setTimeout(() => toastEl.classList.remove('show'), 1800);
             }
 
-            // 1. ASYNC / NON-BLOCKING APP INITIALIZATION
-            function initLauncher() {
-                // Background Wallpaper Loading (deferred)
-                setTimeout(loadWallpaper, 50);
-
-                // Load Apps using RequestIdleCallback or setTimeout to prevent UI frozen state
-                if ('requestIdleCallback' in window) {
-                    requestIdleCallback(loadAppsProcess);
-                } else {
-                    setTimeout(loadAppsProcess, 10);
+            function vibrate(ms) {
+                if (navigator.vibrate) {
+                    try { navigator.vibrate(ms); } catch (e) {}
                 }
             }
 
-            function loadWallpaper() {
+            /* ============================================================
+               INIT
+            ============================================================ */
+            function initLauncher() {
+                setTimeout(loadWallpaperFromStorageOrBridge, 30);
+
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(loadAllAppsFromBridge);
+                } else {
+                    setTimeout(loadAllAppsFromBridge, 10);
+                }
+
+                loadHomeAppsFromStorage();
+                renderHomeApps();
+                bindHomeScreenGestures();
+                bindDrawerEvents();
+                bindWallpaperPicker();
+            }
+
+            /* ============================================================
+               WALLPAPER (BRIDGE & LOCAL STORAGE)
+            ============================================================ */
+            function loadWallpaperFromStorageOrBridge() {
+                const saved = localStorage.getItem(LS_WALLPAPER);
+                if (saved) {
+                    applyWallpaper(saved);
+                    return;
+                }
                 if (window.kh && typeof window.kh.getWallpaper === 'function') {
                     try {
                         const wp = window.kh.getWallpaper();
-                        if (wp && wp.length > 0) {
-                            wallpaperLayer.style.backgroundImage = 'url("' + wp + '")';
-                            wallpaperLayer.classList.remove('wallpaper-fallback');
-                        }
+                        if (wp && wp.length > 0) applyWallpaper(wp);
                     } catch (e) {
-                        console.error('Wallpaper err:', e);
+                        console.error('Wallpaper bridge err:', e);
                     }
                 }
             }
 
-            function loadAppsProcess() {
+            function applyWallpaper(url) {
+                wallpaperLayer.style.backgroundImage = 'url("' + url + '")';
+                wallpaperLayer.classList.remove('wallpaper-fallback');
+            }
+
+            function bindWallpaperPicker() {
+                wallpaperInput.addEventListener('change', function (e) {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = function (ev) {
+                        const dataUrl = ev.target.result;
+                        try {
+                            localStorage.setItem(LS_WALLPAPER, dataUrl);
+                            applyWallpaper(dataUrl);
+                            showToast('Wallpaper berhasil diperbarui');
+                        } catch (err) {
+                            applyWallpaper(dataUrl);
+                            showToast('Wallpaper diterapkan');
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                    wallpaperInput.value = '';
+                });
+            }
+
+            /* ============================================================
+               KONEKSI SCRIPT KE NATIVE BRIDGE (window.kh)
+            ============================================================ */
+            function loadAllAppsFromBridge() {
                 if (window.kh && typeof window.kh.getListApp === 'function') {
                     try {
-                        // Bridge call
                         const rawApps = window.kh.getListApp();
-                        cachedApps = JSON.parse(rawApps);
+                        allApps = JSON.parse(rawApps);
                     } catch (e) {
-                        console.error('Error parsing list app:', e);
-                        cachedApps = MOCK_APPS;
+                        console.error('Error parsing list app from bridge:', e);
+                        allApps = [];
                     }
                 } else {
-                    cachedApps = MOCK_APPS;
+                    // Browser Fallback Notice
+                    allApps = [];
+                    drawerAppsGrid.innerHTML = '<div class="status-msg">Bridge Android (window.kh) tidak ditemukan.<br>Jalankan di aplikasi KuriHome Launcher.</div>';
+                    return;
                 }
 
-                // Sort alphabetically once
-                cachedApps.sort((a, b) => a.name.localeCompare(b.name));
-
-                // Fast initial render
-                renderApps(cachedApps);
+                allApps.sort((a, b) => a.name.localeCompare(b.name));
+                renderDrawerApps(allApps);
             }
 
-            // 2. OPTIMIZED DOM RENDERING (DocumentFragment + Event Delegation)
-            function renderApps(appList) {
+            function openApp(pkg) {
+                if (window.kh && typeof window.kh.openApp === 'function') {
+                    window.kh.openApp(pkg);
+                } else {
+                    alert('Membuka aplikasi: ' + pkg);
+                }
+            }
+
+            /* ============================================================
+               HOME SCREEN GRID & STORAGE
+            ============================================================ */
+            function loadHomeAppsFromStorage() {
+                try {
+                    const raw = localStorage.getItem(LS_HOME_APPS);
+                    homeApps = raw ? JSON.parse(raw) : [];
+                } catch (e) {
+                    homeApps = [];
+                }
+            }
+
+            function saveHomeAppsToStorage() {
+                try {
+                    localStorage.setItem(LS_HOME_APPS, JSON.stringify(homeApps));
+                } catch (e) {
+                    console.error('Gagal menyimpan layout:', e);
+                }
+            }
+
+            function getGridDimensions() {
+                const cols = Math.max(1, Math.floor(homeScreen.clientWidth / CELL_W));
+                const rows = Math.max(1, Math.floor((homeScreen.clientHeight - GRID_TOP_OFFSET) / CELL_H));
+                return { cols, rows };
+            }
+
+            function findFreeCell() {
+                const { cols, rows } = getGridDimensions();
+                const occupied = new Set(homeApps.map(a => a.col + ',' + a.row));
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (!occupied.has(c + ',' + r)) return { col: c, row: r };
+                    }
+                }
+                return null;
+            }
+
+            function renderHomeApps() {
+                homeAppsContainer.innerHTML = '';
+                if (homeApps.length === 0) {
+                    homeEmptyHint.style.opacity = '1';
+                    return;
+                }
+                homeEmptyHint.style.opacity = '0';
+
+                const fragment = document.createDocumentFragment();
+
+                homeApps.forEach((app, index) => {
+                    const el = document.createElement('div');
+                    el.className = 'home-app-item';
+                    el.dataset.index = index;
+
+                    const leftPx = app.col * CELL_W + (CELL_W / 2) - 39;
+                    const topPx = app.row * CELL_H + GRID_TOP_OFFSET;
+                    el.style.left = leftPx + 'px';
+                    el.style.top = topPx + 'px';
+
+                    const iconWrap = document.createElement('div');
+                    iconWrap.className = 'icon-wrapper';
+
+                    const img = document.createElement('img');
+                    img.className = 'app-icon';
+                    img.src = app.icon || '';
+                    img.alt = app.name;
+                    img.loading = 'lazy';
+                    img.decoding = 'async';
+
+                    const label = document.createElement('span');
+                    label.className = 'app-name';
+                    label.textContent = app.name;
+
+                    iconWrap.appendChild(img);
+                    el.appendChild(iconWrap);
+                    el.appendChild(label);
+
+                    makeDraggable(el, index);
+                    fragment.appendChild(el);
+                });
+
+                homeAppsContainer.appendChild(fragment);
+            }
+
+            /* ============================================================
+               GESTUR & DRAG-AND-DROP HOME SCREEN
+            ============================================================ */
+            function makeDraggable(el, appIndex) {
+                let startX = 0, startY = 0;
+                let initialLeft = 0, initialTop = 0;
+                let isDragging = false;
+                let dragTimer = null;
+
+                const onStart = (clientX, clientY) => {
+                    startX = clientX;
+                    startY = clientY;
+                    initialLeft = parseFloat(el.style.left) || 0;
+                    initialTop = parseFloat(el.style.top) || 0;
+                    isDragging = false;
+
+                    dragTimer = setTimeout(() => {
+                        isDragging = true;
+                        vibrate(40);
+                        el.classList.add('dragging');
+                    }, 350);
+                };
+
+                const onMove = (clientX, clientY) => {
+                    const dx = clientX - startX;
+                    const dy = clientY - startY;
+
+                    if (!isDragging && Math.hypot(dx, dy) > 8) {
+                        clearTimeout(dragTimer);
+                    }
+
+                    if (isDragging) {
+                        el.style.left = (initialLeft + dx) + 'px';
+                        el.style.top = (initialTop + dy) + 'px';
+                    }
+                };
+
+                const onEnd = (clientX, clientY) => {
+                    clearTimeout(dragTimer);
+
+                    if (isDragging) {
+                        el.classList.remove('dragging');
+                        isDragging = false;
+
+                        // Calculate nearest grid slot
+                        const currentLeft = parseFloat(el.style.left);
+                        const currentTop = parseFloat(el.style.top);
+
+                        let targetCol = Math.round((currentLeft + 39 - (CELL_W / 2)) / CELL_W);
+                        let targetRow = Math.round((currentTop - GRID_TOP_OFFSET) / CELL_H);
+
+                        const { cols, rows } = getGridDimensions();
+                        targetCol = Math.max(0, Math.min(cols - 1, targetCol));
+                        targetRow = Math.max(0, Math.min(rows - 1, targetRow));
+
+                        // Snap position
+                        homeApps[appIndex].col = targetCol;
+                        homeApps[appIndex].row = targetRow;
+                        saveHomeAppsToStorage();
+                        renderHomeApps();
+                    } else {
+                        // Click event -> open app
+                        vibrate(15);
+                        openApp(homeApps[appIndex].packageName);
+                    }
+                };
+
+                el.addEventListener('touchstart', (e) => {
+                    const t = e.touches[0];
+                    onStart(t.clientX, t.clientY);
+                }, { passive: true });
+
+                el.addEventListener('touchmove', (e) => {
+                    const t = e.touches[0];
+                    onMove(t.clientX, t.clientY);
+                }, { passive: true });
+
+                el.addEventListener('touchend', (e) => {
+                    const t = e.changedTouches[0];
+                    onEnd(t.clientX, t.clientY);
+                });
+            }
+
+            function bindHomeScreenGestures() {
+                let lastTap = 0;
+                let longPressTimer = null;
+
+                homeScreen.addEventListener('touchstart', (e) => {
+                    if (e.target !== homeScreen && e.target !== homeAppsContainer) return;
+
+                    // Long press empty space -> open picker mode
+                    longPressTimer = setTimeout(() => {
+                        vibrate(50);
+                        openDrawer(true);
+                    }, 600);
+
+                    // Double tap -> change wallpaper
+                    const now = Date.now();
+                    if (now - lastTap < 300) {
+                        clearTimeout(longPressTimer);
+                        vibrate(30);
+                        wallpaperInput.click();
+                    }
+                    lastTap = now;
+                }, { passive: true });
+
+                homeScreen.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
+                homeScreen.addEventListener('touchend', () => clearTimeout(longPressTimer));
+            }
+
+            /* ============================================================
+               APP DRAWER MODAL & EVENT DELEGATION
+            ============================================================ */
+            function openDrawer(isPicker = false) {
+                pickerMode = isPicker;
+                drawerHeaderInfo.textContent = pickerMode ? 'Ketuk aplikasi untuk menambah ke Layar Utama' : '';
+                drawerSearch.value = '';
+                renderDrawerApps(allApps);
+
+                document.body.classList.add('drawer-active');
+                drawerOverlay.classList.add('open');
+                drawerSearch.focus();
+            }
+
+            function closeDrawer() {
+                document.body.classList.remove('drawer-active');
+                drawerOverlay.classList.remove('open');
+                drawerSearch.blur();
+            }
+
+            function renderDrawerApps(appList) {
                 if (!appList || appList.length === 0) {
-                    appsGrid.innerHTML = '<div class="status-msg">Aplikasi tidak ditemukan</div>';
+                    if (!window.kh) return;
+                    drawerAppsGrid.innerHTML = '<div class="status-msg">Aplikasi tidak ditemukan</div>';
                     return;
                 }
 
@@ -257,7 +766,7 @@
                     const app = appList[i];
 
                     const item = document.createElement('div');
-                    item.className = 'app-item';
+                    item.className = 'drawer-app-item';
                     item.dataset.package = app.packageName;
 
                     const iconWrap = document.createElement('div');
@@ -265,9 +774,9 @@
 
                     const img = document.createElement('img');
                     img.className = 'app-icon';
-                    img.src = app.icon || createSvgIcon('#666');
+                    img.src = app.icon || '';
                     img.alt = app.name;
-                    img.loading = 'lazy'; // Lazy image rendering
+                    img.loading = 'lazy';
                     img.decoding = 'async';
 
                     const label = document.createElement('span');
@@ -281,38 +790,69 @@
                     fragment.appendChild(item);
                 }
 
-                appsGrid.innerHTML = '';
-                appsGrid.appendChild(fragment);
+                drawerAppsGrid.innerHTML = '';
+                drawerAppsGrid.appendChild(fragment);
             }
 
-            // 3. FAST EVENT DELEGATION FOR CLICKING APPS
-            appsGrid.addEventListener('click', function (e) {
-                const target = e.target.closest('.app-item');
-                if (target && target.dataset.package) {
-                    const pkg = target.dataset.package;
-                    if (window.kh && typeof window.kh.openApp === 'function') {
-                        window.kh.openApp(pkg);
-                    } else {
-                        alert('Membuka: ' + pkg);
-                    }
-                }
-            });
+            function bindDrawerEvents() {
+                fabDrawerBtn.addEventListener('click', () => {
+                    vibrate(20);
+                    openDrawer(false);
+                });
 
-            // 4. DEBOUNCED SEARCH FOR FAST SMOOTH FILTERING
-            let searchTimeout = null;
-            searchInput.addEventListener('input', function (e) {
-                const query = e.target.value.toLowerCase().trim();
-                
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function () {
-                    if (!query) {
-                        renderApps(cachedApps);
-                        return;
+                drawerOverlay.addEventListener('click', (e) => {
+                    if (e.target === drawerOverlay) closeDrawer();
+                });
+
+                // Event delegation for fast smooth app selection
+                drawerAppsGrid.addEventListener('click', (e) => {
+                    const target = e.target.closest('.drawer-app-item');
+                    if (!target || !target.dataset.package) return;
+
+                    const pkg = target.dataset.package;
+                    const selectedApp = allApps.find(a => a.packageName === pkg);
+                    if (!selectedApp) return;
+
+                    vibrate(20);
+
+                    if (pickerMode) {
+                        const cell = findFreeCell();
+                        if (!cell) {
+                            showToast('Layar utama penuh!');
+                            return;
+                        }
+                        homeApps.push({
+                            packageName: selectedApp.packageName,
+                            name: selectedApp.name,
+                            icon: selectedApp.icon,
+                            col: cell.col,
+                            row: cell.row
+                        });
+                        saveHomeAppsToStorage();
+                        renderHomeApps();
+                        showToast(selectedApp.name + ' ditambahkan');
+                        closeDrawer();
+                    } else {
+                        closeDrawer();
+                        openApp(pkg);
                     }
-                    const filtered = cachedApps.filter(app => app.name.toLowerCase().includes(query));
-                    renderApps(filtered);
-                }, 100);
-            });
+                });
+
+                // Debounced Search Filter
+                let searchTimeout = null;
+                drawerSearch.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        if (!query) {
+                            renderDrawerApps(allApps);
+                            return;
+                        }
+                        const filtered = allApps.filter(app => app.name.toLowerCase().includes(query));
+                        renderDrawerApps(filtered);
+                    }, 100);
+                });
+            }
 
             // Start Execution
             if (document.readyState === 'loading') {
