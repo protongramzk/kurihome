@@ -2,106 +2,325 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>KuriHome Canvas</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KuriHome Fast Launcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #0d0e12;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Wallpaper Background */
+        #wallpaper-layer {
+            position: fixed;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            z-index: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .wallpaper-fallback {
+            background: radial-gradient(circle at 50% 30%, #1e202e 0%, #090a0f 100%);
+        }
+
+        #wallpaper-layer::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Main Container */
+        .launcher-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+        }
+
+        /* Search Header */
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto 16px auto;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(20, 20, 28, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Responsive Grid App List */
+        .apps-container {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 20px;
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+            gap: 16px 12px;
+            align-content: start;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* App Item Optimizations */
+        .app-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            cursor: pointer;
+            will-change: transform;
+        }
+
+        .app-item:active {
+            transform: scale(0.92);
+        }
+
+        .icon-wrapper {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 6px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+        }
+
+        .app-icon {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* Decoded asynchronously to prevent thread locking */
+            decoding: async;
+        }
+
+        .app-name {
+            font-size: 11.5px;
+            font-weight: 400;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 2px;
+        }
+
+        /* Empty / Loading State */
+        .status-msg {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 40px;
+            font-size: 14px;
+            grid-column: 1 / -1;
+        }
+    </style>
 </head>
 <body>
-    <!-- Background / Wallpaper Layer -->
-    <div id="wallpaper-layer" class="wallpaper-container"></div>
 
-    <!-- Page Viewport: holds all pages, translated on swipe -->
-    <div id="page-viewport" class="page-viewport">
-        <!-- Pages injected dynamically by app.js -->
-    </div>
+    <div id="wallpaper-layer" class="wallpaper-fallback"></div>
 
-    <!-- 2D page indicator -->
-    <div id="page-indicator" class="page-indicator"></div>
+    <div class="launcher-container">
+        <!-- Search Field -->
+        <div class="search-container">
+            <input type="text" id="search-input" class="search-box" placeholder="Cari aplikasi..." autocomplete="off">
+        </div>
 
-    <!-- Optional Dock (hidden unless enabled in settings) -->
-    <div id="dock" class="dock hidden"></div>
-
-    <!-- App Picker Modal (opened on double tap) -->
-    <div id="app-picker-modal" class="modal">
-        <div class="modal-content picker-content">
-            <div class="modal-header">
-                <h3>Tambah Aplikasi</h3>
-                <span class="close-btn" id="close-picker">&times;</span>
-            </div>
-            <div class="search-box-container">
-                <input type="text" id="app-search" placeholder="Cari aplikasi..." autocomplete="off">
-            </div>
+        <!-- Apps Grid -->
+        <div class="apps-container">
             <div id="apps-grid" class="apps-grid">
-                <!-- Apps injected dynamically -->
+                <div class="status-msg">Memuat aplikasi...</div>
             </div>
         </div>
     </div>
 
-    <!-- Icon Context Menu (long press on an icon) -->
-    <div id="icon-context-menu" class="context-menu hidden">
-        <button id="ctx-delete" class="context-item danger">Hapus dari Page</button>
-        <button id="ctx-cancel" class="context-item">Batal</button>
-    </div>
+    <script>
+        (function () {
+            'use strict';
 
-    <!-- Settings & Customization Modal (long press on empty area) -->
-    <div id="settings-modal" class="modal">
-        <div class="modal-content settings-content">
-            <div class="modal-header">
-                <h3>Pengaturan KuriHome</h3>
-                <span class="close-btn" id="close-settings">&times;</span>
-            </div>
-            <div class="settings-body">
+            let cachedApps = [];
+            const appsGrid = document.getElementById('apps-grid');
+            const searchInput = document.getElementById('search-input');
+            const wallpaperLayer = document.getElementById('wallpaper-layer');
 
-                <div class="settings-section">
-                    <h4>Tata Letak Page</h4>
-                    <p class="section-desc">Jumlah page (baris × kolom) dan grid icon per page.</p>
-                    <div class="field-row">
-                        <label>Baris Page <input type="number" id="cfg-page-rows" min="1" max="6"></label>
-                        <label>Kolom Page <input type="number" id="cfg-page-cols" min="1" max="6"></label>
-                    </div>
-                    <div class="field-row">
-                        <label>Baris Grid Icon <input type="number" id="cfg-grid-rows" min="2" max="8"></label>
-                        <label>Kolom Grid Icon <input type="number" id="cfg-grid-cols" min="2" max="8"></label>
-                    </div>
-                    <div class="btn-group">
-                        <button id="btn-apply-layout" class="action-btn primary">Terapkan</button>
-                        <button id="btn-reset-layout" class="action-btn danger">Reset Layout</button>
-                    </div>
-                </div>
+            // Default Fallback Mock Data
+            const MOCK_APPS = [
+                { name: 'Browser', packageName: 'com.android.chrome', icon: createSvgIcon('#4285F4') },
+                { name: 'Settings', packageName: 'com.android.settings', icon: createSvgIcon('#9E9E9E') },
+                { name: 'Camera', packageName: 'com.android.camera', icon: createSvgIcon('#E91E63') },
+                { name: 'Musik', packageName: 'com.android.music', icon: createSvgIcon('#4CAF50') },
+                { name: 'Galeri', packageName: 'com.android.gallery', icon: createSvgIcon('#FF9800') }
+            ];
 
-                <div class="settings-section">
-                    <h4>Tampilan</h4>
-                    <label class="toggle-row">
-                        <span>Tampilkan Dock</span>
-                        <input type="checkbox" id="cfg-dock-enabled">
-                    </label>
-                    <label class="toggle-row">
-                        <span>Tampilkan Indikator Page</span>
-                        <input type="checkbox" id="cfg-indicator-enabled">
-                    </label>
-                </div>
+            function createSvgIcon(color) {
+                return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="' + encodeURIComponent(color) + '"/></svg>';
+            }
 
-                <div class="settings-section">
-                    <h4>Kustomisasi HTML Utama</h4>
-                    <p class="section-desc">Gunakan file index.html Anda sendiri untuk memodifikasi Launcher sepenuhnya.</p>
-                    <div class="btn-group">
-                        <button id="btn-select-html" class="action-btn primary">Pilih File HTML Kustom</button>
-                        <button id="btn-reset-html" class="action-btn danger">Reset ke Default</button>
-                    </div>
-                </div>
+            // 1. ASYNC / NON-BLOCKING APP INITIALIZATION
+            function initLauncher() {
+                // Background Wallpaper Loading (deferred)
+                setTimeout(loadWallpaper, 50);
 
-                <div class="settings-section">
-                    <h4>Dokumentasi API window.kh</h4>
-                    <p class="section-desc">Gunakan dokumentasi Markdown ini untuk membuat index.html kustom Anda sendiri.</p>
-                    <div id="doc-markdown-container" class="markdown-view">
-                        <!-- Documentation Markdown loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                // Load Apps using RequestIdleCallback or setTimeout to prevent UI frozen state
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(loadAppsProcess);
+                } else {
+                    setTimeout(loadAppsProcess, 10);
+                }
+            }
 
-    <script src="app.js"></script>
+            function loadWallpaper() {
+                if (window.kh && typeof window.kh.getWallpaper === 'function') {
+                    try {
+                        const wp = window.kh.getWallpaper();
+                        if (wp && wp.length > 0) {
+                            wallpaperLayer.style.backgroundImage = 'url("' + wp + '")';
+                            wallpaperLayer.classList.remove('wallpaper-fallback');
+                        }
+                    } catch (e) {
+                        console.error('Wallpaper err:', e);
+                    }
+                }
+            }
+
+            function loadAppsProcess() {
+                if (window.kh && typeof window.kh.getListApp === 'function') {
+                    try {
+                        // Bridge call
+                        const rawApps = window.kh.getListApp();
+                        cachedApps = JSON.parse(rawApps);
+                    } catch (e) {
+                        console.error('Error parsing list app:', e);
+                        cachedApps = MOCK_APPS;
+                    }
+                } else {
+                    cachedApps = MOCK_APPS;
+                }
+
+                // Sort alphabetically once
+                cachedApps.sort((a, b) => a.name.localeCompare(b.name));
+
+                // Fast initial render
+                renderApps(cachedApps);
+            }
+
+            // 2. OPTIMIZED DOM RENDERING (DocumentFragment + Event Delegation)
+            function renderApps(appList) {
+                if (!appList || appList.length === 0) {
+                    appsGrid.innerHTML = '<div class="status-msg">Aplikasi tidak ditemukan</div>';
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+
+                for (let i = 0; i < appList.length; i++) {
+                    const app = appList[i];
+
+                    const item = document.createElement('div');
+                    item.className = 'app-item';
+                    item.dataset.package = app.packageName;
+
+                    const iconWrap = document.createElement('div');
+                    iconWrap.className = 'icon-wrapper';
+
+                    const img = document.createElement('img');
+                    img.className = 'app-icon';
+                    img.src = app.icon || createSvgIcon('#666');
+                    img.alt = app.name;
+                    img.loading = 'lazy'; // Lazy image rendering
+                    img.decoding = 'async';
+
+                    const label = document.createElement('span');
+                    label.className = 'app-name';
+                    label.textContent = app.name;
+
+                    iconWrap.appendChild(img);
+                    item.appendChild(iconWrap);
+                    item.appendChild(label);
+
+                    fragment.appendChild(item);
+                }
+
+                appsGrid.innerHTML = '';
+                appsGrid.appendChild(fragment);
+            }
+
+            // 3. FAST EVENT DELEGATION FOR CLICKING APPS
+            appsGrid.addEventListener('click', function (e) {
+                const target = e.target.closest('.app-item');
+                if (target && target.dataset.package) {
+                    const pkg = target.dataset.package;
+                    if (window.kh && typeof window.kh.openApp === 'function') {
+                        window.kh.openApp(pkg);
+                    } else {
+                        alert('Membuka: ' + pkg);
+                    }
+                }
+            });
+
+            // 4. DEBOUNCED SEARCH FOR FAST SMOOTH FILTERING
+            let searchTimeout = null;
+            searchInput.addEventListener('input', function (e) {
+                const query = e.target.value.toLowerCase().trim();
+                
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function () {
+                    if (!query) {
+                        renderApps(cachedApps);
+                        return;
+                    }
+                    const filtered = cachedApps.filter(app => app.name.toLowerCase().includes(query));
+                    renderApps(filtered);
+                }, 100);
+            });
+
+            // Start Execution
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initLauncher);
+            } else {
+                initLauncher();
+            }
+        })();
+    </script>
 </body>
-                </html>
-                            
+</html>
