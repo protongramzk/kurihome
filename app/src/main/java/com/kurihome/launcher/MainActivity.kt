@@ -46,8 +46,9 @@ class MainActivity : AppCompatActivity() {
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
 
-        // Register the JS Bridge
+        // Register the JS Bridges
         webView.addJavascriptInterface(KhBridge(this, this), "kh")
+        webView.addJavascriptInterface(KhSysBridge(this), "khSys")
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
